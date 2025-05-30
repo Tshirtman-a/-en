@@ -1,0 +1,441 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fortune Draw</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #fef6e4;
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+    }
+
+    .container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .torii {
+      position: relative;
+      max-width: 80vw;
+      max-height: 70vh;
+    }
+
+    #drawButton {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 1em 2em;
+      font-size: 2rem;
+      background-color: #ED9121;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      z-index: 5;
+      white-space: nowrap;
+      min-width: 200px;
+      transition: background-color 0.3s;
+    }
+
+    #drawButton:hover {
+      background-color: #D17E1D;
+    }
+
+    .result {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background-color: white;
+      padding: 1em;
+      border: 2px solid #333;
+      border-radius: 10px;
+      text-align: left;
+      white-space: pre-line;
+      width: 80vw;
+      max-width: 500px;
+      z-index: 4;
+      transition: transform 0.5s ease-out;
+    }
+
+    .result.open {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .sakura {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    .petal {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: pink;
+      border-radius: 50%;
+      opacity: 0.8;
+      animation: fall linear infinite;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-10%); opacity: 1; }
+      100% { transform: translateY(110vh); opacity: 0; }
+    }
+
+    .label {
+      font-weight: bold;
+      font-size: 1.5rem;
+      text-align: center;
+      margin-bottom: 1em;
+    }
+
+    .GreatLuck { color: red; text-align: center; }
+    .GoodLuck  { color: orange; text-align: center; }
+    .FairLuck  { color: goldenrod; text-align: center; }
+    .Luck      { color: green; text-align: center; }
+    .MinorLuck { color: blue; text-align: center; }
+    .BadLuck   { color: purple; text-align: center; }
+    .GreatBadLuck { color: black; text-align: center; }
+
+    .countdown {
+      font-size: 4rem;
+      font-weight: bold;
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+    }
+
+    /* Hamburger menu */
+    .menu-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10;
+      cursor: pointer;
+      width: 40px;
+      height: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .menu-toggle span {
+      display: block;
+      height: 5px;
+      background: #000;
+      border-radius: 2px;
+    }
+
+    .menu {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      background-color: white;
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      display: none;
+      z-index: 9;
+    }
+
+    .menu a {
+      display: block;
+      padding: 10px 20px;
+      text-decoration: none;
+      color: #333;
+      border-bottom: 1px solid #eee;
+    }
+
+    .menu a:last-child {
+      border-bottom: none;
+    }
+
+    .menu a:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="menu-toggle" id="menuToggle" aria-label="Open menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="menu" id="menu">
+    <a href="https://www.youtube.com/watch?v=KjWYLJ1x0j0" target="_blank" rel="noopener noreferrer">T-Shirts on Sale</a>
+    <a href="https://www.youtube.com/watch?v=3fzhsrb0GVQ" target="_blank" rel="noopener noreferrer">Terms of Use</a>
+  </div>
+
+  <div class="container">
+    <img src="鳥居.png" class="torii" id="torii" alt="Torii Gate Image">
+    <button id="drawButton" aria-label="Draw a fortune">Draw a Fortune</button>
+    <div class="result" id="resultBox"></div>
+    <div class="sakura" id="sakuraContainer"></div>
+    <div class="countdown" id="countdown"></div>
+  </div>
+
+  <!-- Audio files -->
+  <audio id="soundEffect" src="スイッチを押す.mp3"></audio>
+  <audio id="puff" src="パフ.mp3"></audio>
+  <audio id="yay" src="男衆「イエーイ！」.mp3"></audio>
+  <audio id="yahoo" src="男衆「イヤッホー！」.mp3"></audio>
+  <audio id="ou" src="男衆「オウ！」.mp3"></audio>
+  <audio id="none" src="男衆「、！」.mp3"></audio>
+
+  <script>
+    const drawButton = document.getElementById("drawButton");
+    const resultBox = document.getElementById("resultBox");
+    const sakuraContainer = document.getElementById("sakuraContainer");
+    const countdown = document.getElementById("countdown");
+
+    const soundEffect = document.getElementById("soundEffect");
+    const puff = document.getElementById("puff");
+    const yay = document.getElementById("yay");
+    const yahoo = document.getElementById("yahoo");
+    const ou = document.getElementById("ou");
+    const none = document.getElementById("none");
+
+    const omikujiResults = [
+   // GreatLuck 3
+  {
+    type: "GreatLuck",
+    label: "Great Luck ",
+    result: "Wish: Your dreams are within reach\nLove: A meaningful connection is coming\nStudy: Everything flows smoothly\nWork: Recognition is on the way"
+  },
+  {
+    type: "GreatLuck",
+    label: "Great Luck ",
+    result: "Wish: A joyful surprise awaits\nLove: Destiny brings someone special\nStudy: Ideas come easily\nWork: Major progress ahead"
+  },
+  {
+    type: "GreatLuck",
+    label: "Great Luck ",
+    result: "Wish: Success is around the corner\nLove: Expect an inspiring relationship\nStudy: Your efforts shine\nWork: New doors will open"
+
+  },
+
+  // GoodLuck 4
+  {
+    type: "GoodLuck",
+    label: "Good Luck ",
+    result: "Wish: A chance encounter leads to success\nLove: A happy reunion may happen\nStudy: A new perspective brings clarity\nWork: Positive changes ahead"
+  },
+  {
+    type: "GoodLuck",
+    label: "Good Luck ",
+    result: "Wish: Things will turn in your favor\nLove: Warm connections grow\nStudy: Progress comes with curiosity\nWork: Support will find you"
+  },
+  {
+    type: "GoodLuck",
+    label: "Good Luck ",
+    result: "Wish: Good things come unexpectedly\nLove: A kind heart attracts kindness\nStudy: Stay open to learning\nWork: New paths become visible"
+  },
+  {
+    type: "GoodLuck",
+    label: "Good Luck ",
+    result: "Wish: Keep moving forward\nLove: Honest words build trust\nStudy: Ask and you will understand\nWork: Collaborations bring success"
+  },
+
+  // FairLuck 6
+  {
+    type: "FairLuck",
+    label: "Fair Luck ",
+    result: "Wish: A friend may help you\nLove: Shared hobbies create sparks\nStudy: Don’t be afraid to ask questions\nWork: Be mindful with details"
+  },
+  {
+    type: "FairLuck",
+    label: "Fair Luck ",
+    result: "Wish: Time and patience pay off\nLove: Small steps matter\nStudy: Review and reflect\nWork: Stay organized"
+  },
+  {
+    type: "FairLuck",
+    label: "Fair Luck ",
+    result: "Wish: Stay hopeful and calm\nLove: Friendship may deepen\nStudy: Practice brings confidence\nWork: Stay on track"
+  },
+  {
+    type: "FairLuck",
+    label: "Fair Luck ",
+    result: "Wish: Listen to advice\nLove: Trust grows with time\nStudy: Take notes seriously\nWork: Clarify responsibilities"
+  },
+  {
+    type: "FairLuck",
+    label: "Fair Luck ",
+    result: "Wish: Help is nearby\nLove: Genuine care is noticed\nStudy: Ask for help if needed\nWork: Plan before acting"
+  },
+  {
+    type: "FairLuck",
+    label: "Fair Luck ",
+    result: "Wish: Stay open to options\nLove: Gentle gestures are powerful\nStudy: Group learning helps\nWork: Double-check your work"
+  },
+
+  // Luck 8
+  {
+    type: "Luck",
+    label: "Luck ",
+    result: "Wish: Timing is everything\nLove: Participate in events\nStudy: Review often\nWork: Be open to change"
+  },
+  {
+    type: "Luck",
+    label: "Luck ",
+    result: "Wish: A window of opportunity appears\nLove: Speak sincerely\nStudy: Stick to your goals\nWork: Try something new"
+  },
+  {
+    type: "Luck",
+    label: "Luck ",
+    result: "Wish: Stay prepared\nLove: Enjoy conversations\nStudy: Consistency matters\nWork: Be flexible"
+  },
+  {
+    type: "Luck",
+    label: "Luck ",
+    result: "Wish: Stay alert for chances\nLove: New people bring insight\nStudy: Look back to move forward\nWork: Test your ideas"
+  },
+  {
+    type: "Luck",
+    label: "Luck ",
+    result: "Wish: Take a chance\nLove: Smile more often\nStudy: Review key points\nWork: Step out of your comfort zone"
+  },
+  {
+    type: "Luck",
+    label: "Luck ",
+    result: "Wish: Wait and observe\nLove: Small talks may lead to more\nStudy: Don’t skip the basics\nWork: Volunteer for something new"
+  },
+  {
+    type: "Luck",
+    label: "Luck ",
+    result: "Wish: Be brave\nLove: A new spark may light\nStudy: Share your thoughts\nWork: Innovate boldly"
+  },
+  {
+    type: "Luck",
+    label: "Luck ",
+    result: "Wish: Focus on now\nLove: Fun brings closeness\nStudy: Practice makes perfect\nWork: Think creatively"
+  },
+
+  // MinorLuck 4
+  {
+    type: "MinorLuck",
+    label: "Minor Luck ",
+    result: "Wish: Be patient\nLove: Rushing may hurt things\nStudy: Keep going step by step\nWork: Review your plans"
+  },
+  {
+    type: "MinorLuck",
+    label: "Minor Luck ",
+    result: "Wish: Take it slow\nLove: Let time work\nStudy: Don’t give up yet\nWork: Reorganize your tasks"
+  },
+  {
+    type: "MinorLuck",
+    label: "Minor Luck ",
+    result: "Wish: It’s not the right moment\nLove: Gentle steps work best\nStudy: Avoid comparing\nWork: Check the foundation"
+  },
+  {
+    type: "MinorLuck",
+    label: "Minor Luck ",
+    result: "Wish: Small progress still counts\nLove: Be kind to yourself\nStudy: Focus on basics\nWork: Avoid distractions"
+  },
+
+  // BadLuck 3
+  {
+    type: "BadLuck",
+    label: "Bad Luck ",
+    result: "Wish: Now is not the best time\nLove: Misunderstandings may arise\nStudy: Don’t rush learning\nWork: Don’t push too hard"
+  },
+  {
+    type: "BadLuck",
+    label: "Bad Luck ",
+    result: "Wish: Wait before acting\nLove: Clarify your intentions\nStudy: Confusion is temporary\nWork: Avoid hasty decisions"
+  },
+  {
+    type: "BadLuck",
+    label: "Bad Luck ",
+    result: "Wish: Delay is not denial\nLove: Step back and reflect\nStudy: Stay calm\nWork: Handle conflicts gently"
+  },
+
+  // GreatBadLuck 1
+  {
+    type: "GreatBadLuck",
+    label: "Great Bad Luck",
+    result: "Wish: Tough times ahead, stay strong\nLove: Think carefully before acting\nStudy: Don’t overwork\nWork: Move forward with caution"
+  }
+    ];
+
+    function createPetal() {
+      const petal = document.createElement("div");
+      petal.classList.add("petal");
+      petal.style.left = Math.random() * 100 + "vw";
+      petal.style.animationDuration = 5 + Math.random() * 5 + "s";
+      sakuraContainer.appendChild(petal);
+      setTimeout(() => sakuraContainer.removeChild(petal), 10000);
+    }
+
+    function startSakura() {
+      setInterval(createPetal, 300);
+    }
+
+    function playVoice(resultType) {
+      if (["GreatLuck", "GoodLuck"].includes(resultType)) yay.play();
+      else if (["FairLuck", "Luck"].includes(resultType)) yahoo.play();
+      else if (["MinorLuck", "BadLuck"].includes(resultType)) ou.play();
+      else none.play(); // GreatBadLuck
+    }
+
+    function startCountdownAndResult() {
+      let count = 3;
+      const countSequence = () => {
+        if (count > 0) {
+          countdown.textContent = count;
+          puff.currentTime = 0;
+          puff.play();
+          count--;
+          setTimeout(countSequence, 1000);
+        } else {
+          countdown.textContent = "";
+          const random = omikujiResults[Math.floor(Math.random() * omikujiResults.length)];
+          resultBox.innerHTML = `<div class="${random.type} label">${random.label}</div><div>${random.result}</div>`;
+          resultBox.classList.add("open");
+          playVoice(random.type);
+          startSakura();
+        }
+      };
+      countSequence();
+    }
+
+    drawButton.addEventListener("click", () => {
+      soundEffect.currentTime = 0;
+      soundEffect.play();
+      drawButton.remove();
+      startCountdownAndResult();
+    });
+
+    // Hamburger menu toggle
+    const menuToggle = document.getElementById("menuToggle");
+    const menu = document.getElementById("menu");
+
+    menuToggle.addEventListener("click", () => {
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    });
+
+    // Close menu if clicked outside
+    document.addEventListener("click", (e) => {
+      if (!menu.contains(e.target) && !menuToggle.contains(e.target)) {
+        menu.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
